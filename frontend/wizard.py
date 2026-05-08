@@ -7,11 +7,12 @@ ctk.set_appearance_mode("dark")
 ctk.set_default_color_theme("blue")
 
 class VentanaNuevaRegla(ctk.CTkToplevel):
-    def __init__(self, master, callback_guardar):
+    def __init__(self, master, callback_guardar, regla_existente=None): # <-- Nuevo parámetro
         super().__init__(master)
-        self.title("Constructor de Reglas")
+        self.title("Editar Regla" if regla_existente else "Constructor de Reglas")
         self.geometry("600x350")
         self.callback_guardar = callback_guardar
+        self.regla_existente = regla_existente # Guardamos la referencia
 
         # --- SECCIÓN FIJA ---
         self.frame_fijo = ctk.CTkFrame(self)
@@ -34,6 +35,34 @@ class VentanaNuevaRegla(ctk.CTkToplevel):
         self.cambiar_interfaz("Extraer texto")
         self.focus()
         self.after(100, self.grab_set)
+        
+        if self.regla_existente:
+            self.cargar_datos_regla()
+            
+    def cargar_datos_regla(self):
+        # 1. Nombre
+        self.entry_nombre.insert(0, self.regla_existente.nombre)
+        # Bloqueamos el nombre para evitar conflictos en el diccionario del Dashboard
+        self.entry_nombre.configure(state="disabled") 
+
+        # 2. Tipo y campos específicos
+        if isinstance(self.regla_existente, ReglaExtraccion):
+            self.combo_accion.set("Extraer texto")
+            self.cambiar_interfaz("Extraer texto")
+            
+            # Mapeo inverso para el combo de condición
+            mapa_inv = {0: "Que empiece con", 1: "Que termine con", 2: "Que contenga"}
+            self.combo_condicion.set(mapa_inv[self.regla_existente.condicion])
+            self.entry_valor.insert(0, self.regla_existente.valor)
+            self.entry_longitud.insert(0, str(self.regla_existente.longitud))
+            
+        elif isinstance(self.regla_existente, ReglaClasificacion):
+            self.combo_accion.set("Clasificar documento")
+            self.cambiar_interfaz("Clasificar documento")
+            
+            self.entry_palabras.insert(0, self.regla_existente.palabras_clave)
+            self.entry_true.insert(0, self.regla_existente.salida_v)
+            self.entry_false.insert(0, self.regla_existente.salida_f)
 
     def limpiar_frame_dinamico(self):
         for widget in self.frame_dinamico.winfo_children():

@@ -68,25 +68,42 @@ class DashboardPrincipal(ctk.CTk):
     def recibir_regla(self, objeto_regla, resumen):
         nombre = objeto_regla.nombre
         
-        # Fila visual en la lista
+        # Si la regla YA EXISTE, solo actualizamos el objeto y el texto de la etiqueta
+        if nombre in self.dict_reglas:
+            self.dict_reglas[nombre]["objeto"] = objeto_regla
+            self.dict_reglas[nombre]["label_resumen"].configure(text=f"{{{nombre}}} -> {resumen}")
+            return
+
+        # --- Si es NUEVA, creamos todo lo visual ---
         fila = ctk.CTkFrame(self.lista_reglas_frame, fg_color="#2b2b2b")
         fila.pack(fill="x", pady=2, padx=5)
-        ctk.CTkLabel(fila, text=f"{{{nombre}}} -> {resumen}").pack(side="left", padx=10)
         
-        # Botón del rompecabezas
+        lbl = ctk.CTkLabel(fila, text=f"{{{nombre}}} -> {resumen}")
+        lbl.pack(side="left", padx=10)
+        
         btn_token = ctk.CTkButton(self.frame_tokens, text=f"{{{nombre}}}", width=80, 
                                  command=lambda n=nombre: self.insertar_token(n))
         btn_token.pack(side="left", padx=2)
 
-        # GUARDAMOS AMBOS en el diccionario
+        # Guardamos referencias visuales para poder editarlas luego
         self.dict_reglas[nombre] = {
             "objeto": objeto_regla,
-            "boton": btn_token
+            "boton": btn_token,
+            "label_resumen": lbl 
         }
 
-        # Pasamos el frame de la fila Y el nombre para borrar
+        # Botón Editar
+        ctk.CTkButton(fila, text="Edit", width=40, fg_color="#3b3b3b",
+                      command=lambda n=nombre: self.editar_regla(n)).pack(side="right", padx=5)
+        
+        # Botón Eliminar
         ctk.CTkButton(fila, text="X", width=30, fg_color="red", 
                       command=lambda f=fila, n=nombre: self.eliminar_regla(f, n)).pack(side="right", padx=5)
+
+    def editar_regla(self, nombre):
+        regla_a_editar = self.dict_reglas[nombre]["objeto"]
+        # Abrimos el wizard pasándole la regla
+        VentanaNuevaRegla(self, self.recibir_regla, regla_existente=regla_a_editar)
 
     def insertar_token(self, nombre):
         pos = self.entry_salida.index(ctk.INSERT)
