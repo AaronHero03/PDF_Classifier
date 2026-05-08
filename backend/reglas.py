@@ -49,4 +49,14 @@ class ReglaClasificacion(Regla):
         self.salida_f = salida_f
 
     def ejecutar_logica(self, texto):
-        pass
+        texto_minusculas = texto.lower()
+        
+        if isinstance(self.palabras_clave, str):
+            lista_palabras = [palabra.strip().lower() for palabra in self.palabras_clave.split(",") if palabra.strip()]
+        else:
+            lista_palabras = [palabra.lower() for palabra in self.palabras_clave]
+
+        if any(palabra in texto_minusculas for palabra in lista_palabras):
+            return self.salida_v
+            
+        return self.salida_f
