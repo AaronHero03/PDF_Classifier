@@ -67,29 +67,40 @@ class DashboardPrincipal(ctk.CTk):
 
     def recibir_regla(self, objeto_regla, resumen):
         nombre = objeto_regla.nombre
-        self.dict_reglas[nombre] = objeto_regla
         
-        # Fila visual
+        # Fila visual en la lista
         fila = ctk.CTkFrame(self.lista_reglas_frame, fg_color="#2b2b2b")
         fila.pack(fill="x", pady=2, padx=5)
         ctk.CTkLabel(fila, text=f"{{{nombre}}} -> {resumen}").pack(side="left", padx=10)
-        ctk.CTkButton(fila, text="X", width=30, fg_color="red", command=lambda f=fila, n=nombre: self.eliminar_regla(f, n)).pack(side="right", padx=5)
-
+        
         # Botón del rompecabezas
         btn_token = ctk.CTkButton(self.frame_tokens, text=f"{{{nombre}}}", width=80, 
                                  command=lambda n=nombre: self.insertar_token(n))
         btn_token.pack(side="left", padx=2)
+
+        # GUARDAMOS AMBOS en el diccionario
+        self.dict_reglas[nombre] = {
+            "objeto": objeto_regla,
+            "boton": btn_token
+        }
+
+        # Pasamos el frame de la fila Y el nombre para borrar
+        ctk.CTkButton(fila, text="X", width=30, fg_color="red", 
+                      command=lambda f=fila, n=nombre: self.eliminar_regla(f, n)).pack(side="right", padx=5)
 
     def insertar_token(self, nombre):
         pos = self.entry_salida.index(ctk.INSERT)
         self.entry_salida.insert(pos, f"{{{nombre}}}")
 
     def eliminar_regla(self, frame, nombre):
+        # 1. Eliminar la fila de la lista
         frame.destroy()
+        
+        # 2. Eliminar el botón del rompecabezas y borrar del diccionario
         if nombre in self.dict_reglas:
+            self.dict_reglas[nombre]["boton"].destroy() # <--- ¡Mágia!
             del self.dict_reglas[nombre]
-        # Aquí podrías limpiar también el botón del token, pero por simplicidad lo dejamos así
-
+            
     def procesar(self):
         ruta = self.entry_carpeta.get()
         formato = self.entry_salida.get()
@@ -104,7 +115,9 @@ class DashboardPrincipal(ctk.CTk):
 
         self.motor.set_ruta_entrada(ruta)
         self.motor.set_form_salida(formato)
-        self.motor.reglas = list(self.dict_reglas.values())
+        
+        lista_objetos = [datos["objeto"] for datos in self.dict_reglas.values()]
+        self.motor.reglas = lista_objetos
         
         try:
             self.motor.procesar_archivos()
