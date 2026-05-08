@@ -6,7 +6,7 @@ from PIL import Image
 import io
 
 # --- CONFIGURACIÓN DE TESSERACT ---
-pytesseract.pytesseract.tesseract_cmd = r'C:\Program Files\Tesseract-OCR\tesseract.exe'
+pytesseract.pytesseract.tesseract_cmd = r'/usr/bin/tesseract'
 
 def extraer_datos_ocr(ruta_pdf):
     try:
