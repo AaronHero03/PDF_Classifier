@@ -27,6 +27,9 @@ class MotorOCR:
         
     def procesar_archivos(self):
         
+        archivos_procesados = []
+        archivos_fallidos = []
+        
         archivos = [f for f in os.listdir(self.ruta_entrada) 
             if f.lower().endswith(".pdf")]
 
@@ -39,6 +42,11 @@ class MotorOCR:
             
             resultados = self.procesar_archivo_actual(ruta_antigua)
             
+            if "NO_ENCONTRADO" in resultados.values():
+                archivos_fallidos.append(archivo)
+                print(f"Omitido: {archivo} (Datos no encontrados)")
+                continue
+            
             nuevo_nombre = self.generar_nombre(resultados)
             ruta_nueva = os.path.join(self.ruta_entrada, nuevo_nombre)
             
@@ -46,12 +54,14 @@ class MotorOCR:
             
             try:
                 os.rename(ruta_antigua, ruta_final)
-                solo_nombre_final = os.path.basename(ruta_final)
+                archivos_procesados.append(os.path.basename(ruta_final))
                 print(f"Renombrado: {archivo} -> {nuevo_nombre}")
             except FileExistsError:
                 print(f"Error: El nombre {nuevo_nombre} ya existe. Se omitió {archivo}.")
             except Exception as e:
                 print(f"No se pudo renombrar {archivo}: {e}")
+                
+        return archivos_procesados, archivos_fallidos
                 
                    
     def generar_nombre(self, resultados):

@@ -1,6 +1,7 @@
 import customtkinter as ctk
 from tkinter import messagebox, filedialog
 import os
+import sys
 
 # Importamos el motor y el wizard
 from backend.motor import MotorOCR
@@ -9,15 +10,14 @@ from frontend.wizard import VentanaNuevaRegla
 ctk.set_appearance_mode("dark")
 ctk.set_default_color_theme("blue")
 
-
 class DashboardPrincipal(ctk.CTk):
-    def __init__(self):
+    def __init__(self, motor):
         super().__init__()
         self.title("OCR PDF Manager")
         self.geometry("900x700")
 
         # El motor (Ajustado para tu Arch Linux)
-        self.motor = MotorOCR('/usr/bin/tesseract')
+        self.motor = motor
         self.dict_reglas = {} # Para guardar objetos vinculados a sus nombres
 
         # --- HEADER ---
@@ -137,7 +137,14 @@ class DashboardPrincipal(ctk.CTk):
         self.motor.reglas = lista_objetos
         
         try:
-            self.motor.procesar_archivos()
-            messagebox.showinfo("Listo", "Procesamiento terminado con éxito")
+            exitosos, fallidos = self.motor.procesar_archivos()
+            
+            if not fallidos:
+                messagebox.showinfo("Listo", f"Se renombraron {len(exitosos)} archivos con éxito.")
+            else:
+                msg = f"Proceso terminado.\n\n✅ Exitosos: {len(exitosos)}\n⚠️ Omitidos: {len(fallidos)}\n\n"
+                msg += "Los omitidos no contenían todos los datos requeridos por tus reglas."
+                messagebox.showwarning("Atención", msg)
+                
         except Exception as e:
-            messagebox.showerror("Error", f"Fallo: {str(e)}")
+            messagebox.showerror("Error", f"Fallo crítico: {e}")

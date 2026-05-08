@@ -17,28 +17,37 @@ class Regla:
         pass
 
 class ReglaExtraccion(Regla):
-    def __init__(self, nombre, paginas, condicion, valor, longitud):
+    def __init__(self, nombre, paginas, condicion, valor, longitud, ignorar_mayus):
         super().__init__(nombre, paginas)
         self.condicion = condicion
         self.valor = valor
         self.longitud = longitud
+        self.ignorar_mayus = ignorar_mayus
 
     def ejecutar_logica(self, texto):
+        val_esc = re.escape(self.valor)
         
-        # 0 -> Empieza con. 1 -> Termina con. 2 -> Contiene
-        l_faltante = self.longitud - len(self.valor)
-        
-        regex = ""
+        if self.longitud == 0:
+            cuantificador = r"\w*" 
+        else:
+            l_faltante = max(0, self.longitud - len(self.valor))
+            cuantificador = rf"\w{{{l_faltante}}}"
+
         if self.condicion == 0:
-            regex = rf"\b{self.valor}\d{{{l_faltante}}}\b"
+            regex = rf"\b{val_esc}{cuantificador}\b"
             
         elif self.condicion == 1:
-            regex = rf"\b\d{{{l_faltante}}}{self.valor}\b"
+            regex = rf"\b{cuantificador}{val_esc}\b"
             
         elif self.condicion == 2:
-            regex = rf"\b(?=\w*{self.valor}\w*)\w{{{self.longitud}}}\b"
+            if self.longitud == 0:
+                regex = rf"\b\w*{val_esc}\w*\b"
+            else:
+                regex = rf"\b(?=\w*{val_esc}\w*)\w{{{self.longitud}}}\b"
         
-        resultado = re.search(regex, texto)
+        flags = re.IGNORECASE if self.ignorar_mayus else 0
+        resultado = re.search(regex, texto, flags=flags)
+            
         return resultado.group(0) if resultado else "NO_ENCONTRADO"
         
 class ReglaClasificacion(Regla):

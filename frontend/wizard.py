@@ -26,6 +26,11 @@ class VentanaNuevaRegla(ctk.CTkToplevel):
         self.combo_accion = ctk.CTkComboBox(self.frame_fijo, values=["Extraer texto", "Clasificar documento"], command=self.cambiar_interfaz)
         self.combo_accion.grid(row=0, column=3, padx=5, pady=10)
 
+        ctk.CTkLabel(self.frame_fijo, text="Páginas:").grid(row=1, column=0, padx=5, pady=5)
+        self.entry_pagina = ctk.CTkEntry(self.frame_fijo, width=120, placeholder_text="Ej. 1, 2, 3")
+        self.entry_pagina.grid(row=1, column=1, padx=5, pady=5)
+        ctk.CTkLabel(self.frame_fijo, text="(Separadas por coma)", font=("Arial", 10, "italic")).grid(row=1, column=2, columnspan=2, sticky="w")
+        
         self.frame_dinamico = ctk.CTkFrame(self)
         self.frame_dinamico.pack(pady=10, padx=20, fill="both", expand=True)
 
@@ -45,10 +50,18 @@ class VentanaNuevaRegla(ctk.CTkToplevel):
         # Bloqueamos el nombre para evitar conflictos en el diccionario del Dashboard
         self.entry_nombre.configure(state="disabled") 
 
+        pags_humanas = ", ".join([str(p + 1) for p in self.regla_existente.paginas])
+        self.entry_pagina.insert(0, pags_humanas)
+
         # 2. Tipo y campos específicos
         if isinstance(self.regla_existente, ReglaExtraccion):
             self.combo_accion.set("Extraer texto")
             self.cambiar_interfaz("Extraer texto")
+            
+            if getattr(self.regla_existente, 'ignorar_mayus', True):
+                self.check_mayus.select()
+            else:
+                self.check_mayus.deselect()
             
             # Mapeo inverso para el combo de condición
             mapa_inv = {0: "Que empiece con", 1: "Que termine con", 2: "Que contenga"}
@@ -79,8 +92,12 @@ class VentanaNuevaRegla(ctk.CTkToplevel):
             self.entry_valor.grid(row=0, column=2, padx=5, pady=15)
 
             ctk.CTkLabel(self.frame_dinamico, text="Longitud:").grid(row=1, column=0, padx=5, pady=15)
-            self.entry_longitud = ctk.CTkEntry(self.frame_dinamico, placeholder_text="8", width=50)
+            self.entry_longitud = ctk.CTkEntry(self.frame_dinamico, placeholder_text="0 = Cualquiera", width=150)
             self.entry_longitud.grid(row=1, column=1, padx=5, pady=15, sticky="w")
+
+            self.check_mayus = ctk.CTkCheckBox(self.frame_dinamico, text="Ignorar mayúsculas/minúsculas")
+            self.check_mayus.grid(row=2, column=0, columnspan=2, padx=5, pady=15, sticky="w")
+            self.check_mayus.select() # Marcado por defecto
         else:
             ctk.CTkLabel(self.frame_dinamico, text="Si contiene:").grid(row=0, column=0, padx=5, pady=15)
             self.entry_palabras = ctk.CTkEntry(self.frame_dinamico, placeholder_text="Palabras clave (coma)", width=250)
@@ -97,7 +114,18 @@ class VentanaNuevaRegla(ctk.CTkToplevel):
             messagebox.showwarning("Error", "Nombre de variable requerido")
             return
 
-        paginas = [0]
+        entrada_paginas = self.entry_pagina.get().strip()
+        try:
+            if "," in entrada_paginas:
+                # Quitamos espacios, dividimos por coma y restamos 1 a cada número
+                paginas = [int(p.strip()) - 1 for p in entrada_paginas.split(",") if p.strip().isdigit()]
+            else:
+                # Si es solo un número o está vacío
+                pag_val = int(entrada_paginas) if entrada_paginas.isdigit() else 1
+                paginas = [pag_val - 1]
+        except Exception:
+            paginas = [0]
+
         if self.combo_accion.get() == "Extraer texto":
             mapa_cond = {"Que empiece con": 0, "Que termine con": 1, "Que contenga": 2}
             cond = mapa_cond[self.combo_condicion.get()]
@@ -106,8 +134,13 @@ class VentanaNuevaRegla(ctk.CTkToplevel):
                 long = int(self.entry_longitud.get() or 0)
             except ValueError:
                 long = 0
-            obj_regla = ReglaExtraccion(nombre, paginas, cond, val, long)
-            resumen = f"Extraer {self.combo_condicion.get()} '{val}'"
+                
+            # Capturamos si el checkbox está marcado (1) o no (0)
+            ignorar = bool(self.check_mayus.get())
+            
+            # Le pasamos el nuevo parámetro al objeto
+            obj_regla = ReglaExtraccion(nombre, paginas, cond, val, long, ignorar_mayus=ignorar)
+            resumen = f"Pág({paginas}) | {'Aa' if not ignorar else 'a=A'} | {self.combo_condicion.get()} '{val}'"
         else:
             palabras = self.entry_palabras.get()
             v = self.entry_true.get()
