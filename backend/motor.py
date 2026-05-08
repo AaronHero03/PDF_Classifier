@@ -1,46 +1,10 @@
-import re
 import os
 import fitz  # PyMuPDF
 import pytesseract
 from PIL import Image
 import io
 
-
-class Regla:
-    def __init__(self, nombre, paginas):
-        self.nombre = nombre
-        self.paginas = paginas
-        
-    def evaluar(self, diccionario_textos):
-        texto_a_evaluar = ""
-        for pag in self.paginas:
-            if pag in diccionario_textos:
-                texto_a_evaluar += diccionario_textos[pag] + " "
-                
-        return self.ejecutar_logica(texto_a_evaluar)
-
-    def ejecutar_logica(self, texto):
-        pass
-
-class ReglaExtraccion(Regla):
-    def __init__(self, nombre, paginas, condicion, valor, longitud):
-        super().__init__(nombre, paginas)
-        self.condicion = condicion
-        self.valor = valor
-        self.longitud = longitud
-
-    def ejecutar_logica(self, texto):
-        pass
-
-class ReglaClasificacion(Regla):
-    def __init__(self, nombre, paginas, palabras_clave, salida_v, salida_f):
-        super().__init__(nombre, paginas)
-        self.palabras_clave = palabras_clave
-        self.salida_v = salida_v
-        self.salida_f = salida_f
-
-    def ejecutar_logica(self, texto):
-        pass
+from backend.reglas import Regla
 
 class MotorOCR:
 #        tesseract_path=r'C:\Program Files\Tesseract-OCR\tesseract.exe'
@@ -75,14 +39,40 @@ class MotorOCR:
             
             resultados = self.procesar_archivo_actual(ruta_antigua)
             
-            renombrar(resultados)
+            nuevo_nombre = self.generar_nombre(resultados)
+            ruta_nueva = os.path.join(self.ruta_entrada, nuevo_nombre)
             
+            try:
+                os.rename(ruta_antigua, ruta_nueva)
+                print(f"Renombrado: {archivo} -> {nuevo_nombre}")
+            except FileExistsError:
+                print(f"Error: El nombre {nuevo_nombre} ya existe. Se omitió {archivo}.")
+            except Exception as e:
+                print(f"No se pudo renombrar {archivo}: {e}")
+                
                    
-    def renombrar(self, resultados):
-        print("Renombrar")
-        # Logica para rennombrar los archivos con base a los resultados y al formato de salida especificado
-
-    
+    def generar_nombre(self, resultados, formato_salida):
+        """
+        Recibe:
+        resultados = {"Regla 1": "A00574813", "Regla 2": "CC"}
+        formato_salida = "{Regla 1} Matricula {Regla 2}"
+        """
+        nombre_final = formato_salida
+        
+        for nombre_regla, valor_encontrado in resultados.items():
+            # Buscamos literalmente la etiqueta con sus llaves, ej: "{Regla 1}"
+            etiqueta_a_buscar = f"{{{nombre_regla}}}"
+            
+            # Reemplazamos la etiqueta con el valor real
+            # Convertimos a string por si acaso el valor encontrado fuera un número
+            nombre_final = nombre_final.replace(etiqueta_a_buscar, str(valor_encontrado))
+            
+        if not nombre_final.lower().endswith(".pdf"):
+            nombre_final += ".pdf"
+            
+        nombre_final = " ".join(nombre_final.split())
+            
+        return nombre_final
     
     # Funcion principal para procesar cada archivo independiente
     def procesar_archivo_actual(self, ruta_individual):
@@ -91,7 +81,7 @@ class MotorOCR:
             for p in regla.paginas:
                 paginas_necesarias.add(p)
                 
-        textos_por_pagina = self.extraer_textos(list(paginas_necesarias), ruta_individual)
+        textos_por_pagina = self.extraer_textos(sorted(paginas_necesarias), ruta_individual)
         
         resultados = {}
         for regla in self.reglas:
@@ -101,7 +91,7 @@ class MotorOCR:
     
     # Extraer el texto del documento de todas las paginas necesarias
     # Salida: Diccionario Pagina:Texto 
-    def extraer_texto(paginas, ruta):
+    def extraer_textos(self, paginas, ruta):
         doc = fitz.open(ruta)
         textos_extraidos = {}
 
