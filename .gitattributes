@@ -1,0 +1,8 @@
+# Ignorar carpetas de terceros para las estadísticas de GitHub
+venv/* linguist-vendored
+tesseract_bin/* linguist-vendored
+dist/* linguist-vendored
+build/* linguist-vendored
+
+# Si por alguna razón hay HTMLs sueltos, ignóralos
+*.html linguist-detectable=false
